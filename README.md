@@ -118,6 +118,25 @@ wrangler publish
 
 - Cloudflare Dashboard → Workers & Pages → `mymachai-leads-api` → Settings → Triggers → Add custom domain
 
+### 📈 How to Import Leads Directly into Google Sheets (No-Code Tutorial)
+
+You can easily pull live B2B leads into Google Sheets using the free "API Connector" extension or Google Apps Script:
+
+#### Method: Using API Connector Extension (Recommended)
+1. Open a new **Google Sheet**.
+2. Go to top menu: **Extensions** ➔ **Add-ons** ➔ **Get add-ons**.
+3. Search for **API Connector** (by InstallSimple) and click **Install**.
+4. Open the extension (**Extensions** ➔ **API Connector** ➔ **Open**).
+5. Configure your API Request:
+   - **Request URL:** `https://mymachai-leads-api.p.rapidapi.com/leads?keyword=restaurant&location=Singapore`
+   - **Headers:** Add your RapidAPI key:
+     - Key: `X-RapidAPI-Key` | Value: `YOUR_RAPIDAPI_KEY`
+     - Key: `X-RapidAPI-Host` | Value: `mymachai-leads-api.p.rapidapi.com`
+6. Set Output Destination to current sheet cell (`Sheet1!A1`).
+7. Click **Run**. All live business leads, phone numbers, and addresses will automatically populate into your Google Sheet!
+
+---
+
 ## Project Structure
 
 ```
