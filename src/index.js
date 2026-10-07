@@ -25,7 +25,8 @@ async function fetchSerpAPI(env, keyword, location) {
   }
 
   const query = encodeURIComponent(keyword || '');
-  const locationParam = location ? `&location=${encodeURIComponent(location)}` : '';
+  // SerpAPI requires z or m when location is used (city-level zoom = 13)
+  const locationParam = location ? `&location=${encodeURIComponent(location)}&z=13` : '';
 
   const url = `https://serpapi.com/search.json?engine=google_maps&q=${query}&type=search&api_key=${apiKey}${locationParam}`;
 
