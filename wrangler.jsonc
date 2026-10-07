@@ -1,0 +1,10 @@
+{
+  "name": "mymachai-leads-api",
+  "main": "src/index.js",
+  "compatibility_date": "2026-10-07",
+  "env": {
+    "production": {
+      "SERPAPI_KEY": ""
+    }
+  }
+}
