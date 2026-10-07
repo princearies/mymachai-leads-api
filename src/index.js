@@ -1,5 +1,5 @@
 /**
- * Lead Scraper REST API — Cloudflare Worker
+ * Lead Scraper REST API — Cloudflare Worker (v2: Live Data via SerpAPI)
  * JSON only, no UI
  * Routes: ?keyword=... & location=...
  */
@@ -9,198 +9,160 @@ const CORS_HEADERS = {
   'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type',
   'Content-Type': 'application/json',
-}
+};
 
 // ────────────────────────────
-// Mock data generator (free-tier friendly)
-// Gantikan dengan real scraping call kalau perlu
+// SerpAPI Google Maps Live Search
 // ────────────────────────────
-function generateMockLeads(keyword = '', location = '') {
-  const leads = []
-  const names = [
-    'ABC Enterprise Sdn Bhd',
-    'ABC International Trading',
-    'XYZ Services Malaysia',
-    'XYZ Corporation',
-    '123 Digital Solutions',
-    '456 Tech Services',
-    'Prime Business Group',
-    'Prime Harbor Logistics',
-    'Northwind Manufacturing',
-    'Apex Solutions Sdn Bhd',
-  ]
-  const categories = [
-    'Teknologi', 'Logistics', 'Kewangan', 'Perindustrian',
-    'Jasa', 'Kesihatan', 'Pendidikan', 'Pembinaan',
-    'Perdagangan', 'Konsultasi', 'Perhotelan',
-  ]
-  const locations = [
-    'Kuala Lumpur', 'Penang', 'Johor Bahru', 'Kuching',
-    'Kota Kinabalu', 'Malacca', 'Kuantan', 'Ipoh', 'Sandakan', 'Miri',
-  ]
-  const phones = Array.from({ length: 50 }, (_, i) =>
-    `+60 ${Math.floor(Math.random() * 9000000000) + 1000000000}`
-  )
-
-  const keywordLower = (keyword || '').toLowerCase()
-  for (let i = 0; i < 5; i++) {
-    const name =
-      names[Math.floor(Math.random() * names.length)] +
-      (i > 0 ? ` ${i}G` : '')
-    const category = categories[Math.floor(Math.random() * categories.length)]
-    const loc = location || locations[Math.floor(Math.random() * locations.length)]
-    const phone = phones[i]
-    const email = `${name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-${i}@${loc.toLowerCase().split(' ').join('')}.com`
-    const status = i === 0 ? 'lead' : (i === 1 ? 'contact' : 'inquiry')
-
-    leads.push({
-      id: `lead_${i}_${Date.now()}`,
-      name,
-      category,
-      location: loc,
-      phone,
-      email,
-      status,
-      source: 'mock',
-      keyword: keywordLower,
-      timestamp: new Date().toISOString(),
-    })
+async function fetchSerpAPI(env, keyword, location) {
+  const apiKey = env.SERPAPI_KEY;
+  if (!apiKey) {
+    throw new Error('SERPAPI_KEY is not configured in environment variables.');
   }
-  return leads
-}
 
-// ────────────────────────────
-// Scraping stub (ekstrak dari URL, optional)
-// ────────────────────────────
-async function scrapeLeads(rawUrl) {
-  try {
-    const res = await fetch(rawUrl, {
-      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; LeadScraper/1.0)' },
-      signal: AbortSignal.timeout(8000),
-    })
-    if (!res.ok) return null
-    const text = await res.text()
-    // Placeholder: extract name/category/location/phone/email pattern
-    const leads = []
-    const lines = text.split(/[\n\r]+/)
-    for (const line of lines) {
-      if (!line.trim()) continue
-      const m = line.match(/name["\s:]+([^,\n]+)/i)
-      const c = line.match(/category["\s:]+([^,\n]+)/i)
-      const l = line.match(/location["\s:]+([^,\n]+)/i)
-      const p = line.match(/phone["\s:]+([^,\n]+)/i)
-      const e = line.match(/email["\s:]+([^,\n]+)/i)
-      if (m || c || l || p || e) {
-        leads.push({
-          name: m?.[1] || 'N/A',
-          category: c?.[1] || 'N/A',
-          location: l?.[1] || 'N/A',
-          phone: p?.[1] || 'N/A',
-          email: e?.[1] || 'N/A',
-          source: 'scrape',
-          timestamp: new Date().toISOString(),
-        })
-      }
-    }
-    return leads.slice(0, 5)
-  } catch {
-    return null
+  const query = encodeURIComponent(keyword || '');
+  const locationParam = location ? `&location=${encodeURIComponent(location)}` : '';
+
+  const url = `https://serpapi.com/search.json?engine=google_maps&q=${query}&type=search&api_key=${apiKey}${locationParam}`;
+
+  const res = await fetch(url, {
+    headers: { 'User-Agent': 'Mozilla/5.0 (compatible; LeadScraper/1.0)' },
+  });
+
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`SerpAPI request failed: ${res.status} ${res.statusText} — ${text}`);
   }
+
+  const data = await res.json();
+
+  // Extract from data.local_results (Google Maps results)
+  const results = data.local_results || [];
+  if (results.length === 0) {
+    throw new Error('No results found from SerpAPI. Check API key or query.');
+  }
+
+  return results.map((place, idx) => normalizeLead(place, idx, keyword, location));
+}
+
+function extractPhone(place) {
+  const phone = place.get_results?.phone || place.phone || place.tel || '';
+  return phone || 'N/A';
+}
+
+function extractEmail(place) {
+  const email = place.get_results?.email || place.email || '';
+  return email || 'N/A';
+}
+
+function extractWebsite(place) {
+  const url = place.get_results?.website || place.website || place.url || '';
+  return url || 'N/A';
+}
+
+function inferCategory(place) {
+  const cats = [
+    place.get_results?.categories?.[0] ||
+    place.get_results?.type ||
+    place.category ||
+    '',
+  ];
+  return cats[0] || 'Unknown';
+}
+
+function normalizeLead(place, idx, keyword, location) {
+  const createdAt = place.knowledge_graph?.found?.[0]?.date_found ||
+    new Date().toISOString();
+
+  return {
+    id: place.get_results?.place_id || place.place_id || `place_${idx}_${Date.now()}`,
+    name: place.get_results?.title || place.title || `Business ${idx + 1}`,
+    category: inferCategory(place),
+    location: place.get_results?.address || place.location || place.address || location || 'N/A',
+    phone: extractPhone(place),
+    email: extractEmail(place),
+    website: extractWebsite(place),
+    rating: place.get_results?.rating || place.rating || 0,
+    reviews: place.get_results?.rating_count || place.reviews || 0,
+    status: 'active',
+    timestamp: createdAt,
+    keyword: keyword || 'N/A',
+  };
 }
 
 // ────────────────────────────
-// Main fetch handler
+// Main request handler
 // ────────────────────────────
 export default {
-  async fetch(req, env, ctx) {
+  async fetch(request, env) {
+    const url = new URL(request.url);
+    const keyword = url.searchParams.get('keyword');
+    const location = url.searchParams.get('location');
+
     // CORS preflight
-    if (req.method === 'OPTIONS') {
-      return new Response(null, { headers: CORS_HEADERS })
+    if (request.method === 'OPTIONS') {
+      return new Response(null, { headers: CORS_HEADERS });
     }
 
-    // Rate limiting (free-tier safe: 1 req / 5s per IP)
-    const ip =
-      req.headers.get('CF-Connecting-IP') || req.headers.get('x-forwarded-for') || 'unknown'
-    const now = Date.now()
-    if (env.RATE_LIMIT && env.RATE_LIMIT[ip] && env.RATE_LIMIT[ip] > now - 5000) {
-      return new Response(JSON.stringify({ error: 'Rate limited' }), {
-        status: 429,
-        headers: { ...CORS_HEADERS, 'Cache-Control': 'no-store' },
-      })
-    }
-    env.RATE_LIMIT = env.RATE_LIMIT || {}
-    env.RATE_LIMIT[ip] = now + 5000
-
-    try {
-      const url = new URL(req.url)
-      const keyword = url.searchParams.get('keyword') || ''
-      const location = url.searchParams.get('location') || ''
-
-      // Keyword harus ada (Botulious filter hapus?)
-      if (!keyword) {
-        return new Response(
-          JSON.stringify({
-            success: false,
-            message: 'Parameter "keyword" diperlukan.',
-            example: '?keyword=teknologi&location=Kuala+Lumpur',
-          }),
-          {
-            status: 400,
-            headers: CORS_HEADERS,
-            cacheControl: 'no-store',
-          }
-        )
-      }
-
-      // 1. Cuba scrape dari URL user (if provided)
-      const scrapeUrl = url.searchParams.get('url')
-      let leads = null
-      if (scrapeUrl) {
-        leads = await scrapeLeads(scrapeUrl)
-      }
-
-      // 2. Fallback: mock data generator
-      if (!leads) {
-        leads = generateMockLeads(keyword, location)
-      }
-
-      // Pagination (optional)
-      const page = Math.max(0, parseInt(url.searchParams.get('page') || '0', 10))
-      const limit = Math.min(100, Math.max(1, parseInt(url.searchParams.get('limit') || '20', 10)))
-      const start = page * limit
-      const sliced = leads.slice(start, start + limit)
-
-      return new Response(
-        JSON.stringify({
-          success: true,
-          keyword,
-          location,
-          count: sliced.length,
-          page,
-          limit,
-          leads: sliced,
-          source: leads.some(l => l.source === 'scrape') ? 'scrape' : 'mock',
-          timestamp: new Date().toISOString(),
-        }),
-        {
-          status: 200,
-          headers: CORS_HEADERS,
-          cacheControl: 'no-store',
-        }
-      )
-    } catch (err) {
+    // Validate keyword
+    if (!keyword) {
       return new Response(
         JSON.stringify({
           success: false,
-          error: err.message || 'Internal server error',
-          timestamp: new Date().toISOString(),
+          error: "Query parameter 'keyword' is required",
         }),
-        {
-          status: 500,
-          headers: CORS_HEADERS,
-          cacheControl: 'no-store',
-        }
-      )
+        { status: 400, headers: CORS_HEADERS }
+      );
+    }
+
+    try {
+      const leads = await fetchSerpAPI(env, keyword, location);
+      const response = {
+        success: true,
+        keyword: keyword,
+        location: location || null,
+        count: leads.length,
+        source: 'live_google_maps',
+        timestamp: new Date().toISOString(),
+        leads,
+      };
+
+      return new Response(JSON.stringify(response), {
+        status: 200,
+        headers: CORS_HEADERS,
+      });
+    } catch (err) {
+      console.error('[Lead Scraper Error]', err);
+
+      const message = err.message || 'Unknown error';
+
+      if (message.includes('SERPAPI_KEY') || message.includes('401') || message.includes('unauthorized')) {
+        return new Response(
+          JSON.stringify({
+            success: false,
+            message: 'API key not configured. Please contact admin.'
+          }),
+          { status: 500, headers: CORS_HEADERS }
+        );
+      }
+
+      if (message.includes('429') || message.includes('rate limit')) {
+        return new Response(
+          JSON.stringify({
+            success: false,
+            message: 'Rate limit exceeded. Please try again later.'
+          }),
+          { status: 429, headers: CORS_HEADERS }
+        );
+      }
+
+      return new Response(
+        JSON.stringify({
+          success: false,
+          message: `Error: ${message}`
+        }),
+        { status: 500, headers: CORS_HEADERS }
+      );
     }
   },
-}
+};
