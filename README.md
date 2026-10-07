@@ -1,106 +1,135 @@
-# Lead Scraper API — Cloudflare Worker
+# Lead Scraper REST API — Cloudflare Worker
 
-REST API JSON-only lead scraper untuk menghasilkan data bisnis (mock/mock generator pakej pertama). 
-Disediakan sebagai starter projek untuk dijual di RapidAPI.
+B2B Lead Scraper REST API. Production-ready. Live data via SerpAPI (Google Maps).
 
 ## Fitur
 
-- Query: `?keyword=` & `?location=`
-- JSON only, tidak ada UI
-- CORS ready (`Access-Control-Allow-Origin: *`)
-- Rate limiting (1 req / 5s per IP, free-tier friendly)
-- Mock data generator + scraping stub (Ganti dengan real scraper kalau perlu)
-- Pagination (`?page=` & `?limit=`)
+- ✅ Live search via SerpAPI (Google Maps engine)
+- ✅ JSON only, tidak ada UI
+- ✅ CORS ready (`Access-Control-Allow-Origin: *`)
+- ✅ Rate limiting (1 req / 5s per IP, free-tier friendly)
+- ✅ Graceful error handling (missing key, quota, invalid request)
+- ✅ Structured response format (industry standard)
+- ✅ ES Module (`export default { async fetch(request, env) }`)
 
-## Setup
+## Env Variables
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `SERPAPI_KEY` | ✅ | SerpAPI API key (Google Maps engine) |
+
+Set via:
+```bash
+wrangler secret put SERPAPI_KEY
+```
+
+## Endpoints
+
+### `GET /api`
+
+Query parameters:
+
+| Parameter | Required | Description |
+|-----------|----------|-------------|
+| `keyword` | ✅ | Kata kunci carian (cth: `restaurant`, `technology`, `logistics`) |
+| `location` | ❌ | Daerah/city (cth: `Kuala Lumpur`, `Penang`, `Johor Bahru`) |
+
+Examples:
+```bash
+# Find restaurants in Kuala Lumpur
+curl "https://api.yourdomain.com/api?keyword=restaurant&location=Kuala+Lumpur"
+
+# Find technology companies in Malaysia
+curl "https://api.yourdomain.com/api?keyword=technology&location=Malaysia"
+```
+
+### Success Response
+
+```json
+{
+  "success": true,
+  "keyword": "restaurant",
+  "location": "Kuala Lumpur",
+  "count": 12,
+  "source": "live_google_maps",
+  "timestamp": "2026-10-07T18:30:00.000Z",
+  "leads": [
+    {
+      "id": "ChIJfZ9...",
+      "name": "Gouthaman Restaurant",
+      "category": "Food & Beverage",
+      "location": "123 Jalan Petaling, 50450 Kuala Lumpur, Malaysia",
+      "phone": "+60 3-1234 5678",
+      "email": "N/A",
+      "website": "https://gouthaman.com",
+      "rating": 4.5,
+      "reviews": 120,
+      "status": "active",
+      "timestamp": "2026-10-07T18:30:00.000Z"
+    }
+  ]
+}
+```
+
+### Error Responses
+
+**400 — Keyword missing:**
+```json
+{"success": false, "error": "Query parameter 'keyword' is required"}
+```
+
+**401 — SerpAPI key missing/invalid:**
+```json
+{"success": false, "error": "SerpAPI key is missing or invalid. Set SERPAPI_KEY environment variable."}
+```
+
+**429 — Rate limit exceeded:**
+```json
+{"success": false, "error": "SerpAPI rate limit or quota exceeded."}
+```
+
+## Deployment
 
 ### 1. Install Wrangler CLI
 
 ```bash
 npm install -g wrangler
-# atau
-pnpm add -g wrangler
 ```
 
-### 2. Login ke Cloudflare
+### 2. Login
 
 ```bash
 wrangler login
 ```
 
-### 3. Deploy
+### 3. Set Secret
+
+```bash
+wrangler secret put SERPAPI_KEY
+```
+
+### 4. Deploy
 
 ```bash
 wrangler publish
 ```
 
-Atau deploy manual dari dashboard:
-- Cloudflare Dashboard → Workers & Pages → Create Worker
-- Edit code → Save and Deploy
+### 5. Custom Domain (optional)
 
-## API Endpoint
+- Cloudflare Dashboard → Workers & Pages → `mymachai-leads-api` → Settings → Triggers → Add custom domain
+
+## Project Structure
 
 ```
-https://mymachai-leads-api.<your-subdomain>.workers.dev/api
-```
-
-### Parameters
-
-| Parameter | Required | Description |
-|-----------|----------|-------------|
-| `keyword` | ✅ | Kata kunci carian (cth: `teknologi`, `logistics`) |
-| `location` | ❌ | Daerah (cth: `Kuala Lumpur`, `Penang`) |
-| `url` | ❌ | URL untuk real scraping |
-| `page` | ❌ | Halaman (default 0) |
-| `limit` | ❌ | Jumlah hasil (default 20, max 100) |
-
-### Response
-
-```json
-{
-  "success": true,
-  "keyword": "teknologi",
-  "location": "Kuala Lumpur",
-  "count": 20,
-  "page": 0,
-  "limit": 20,
-  "leads": [
-    {
-      "id": "lead_0_1700000000000",
-      "name": "ABC Enterprise Sdn Bhd",
-      "category": "Teknologi",
-      "location": "Kuala Lumpur",
-      "phone": "+60 123456789",
-      "email": "abc-enterprise-sdn-bhd-0@kl.com",
-      "status": "lead",
-      "source": "mock",
-      "keyword": "teknologi",
-      "timestamp": "2026-10-07T10:00:00.000Z"
-    }
-  ],
-  "source": "mock",
-  "timestamp": "2026-10-07T10:00:00.000Z"
-}
-```
-
-### CORS
-
-Semua response callback dari `*` (tunggalkan `*` main domain kalau nak lock-down).
-
-### Rate Limit
-
-Free tier: 1 request per 5 seconds per IP. 429 jika over.
-
-## Development
-
-```bash
-# Start local dev server
-wrangler dev
-
-# Test
-curl "http://localhost:8787/api?keyword=teknologi&location=Kuala+Lumpur"
+.
+├── src/
+│   └── index.js      # Main worker entry (ES Module)
+├── wrangler.toml     # Worker config (main src/index.js)
+├── README.md
+└── .gitignore
 ```
 
 ## License
 
-MIT — Guna secara bebas untuk projek personal atau komersial.
+MIT — Guna secara bebas untuk projek komersial.
+
