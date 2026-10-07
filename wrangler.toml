@@ -1,8 +1,0 @@
-name = "mymachai-leads-api"
-main = "src/index.js"
-compatibility_date = "2026-10-07"
-
-# Bind environment variables (including secrets)
-# SERPAPI_KEY akan otomatis dari secret store
-[vars]
-# RATE_LIMIT = "1 req / 5s per IP" — free tier safe
