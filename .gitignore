@@ -1,0 +1,16 @@
+# Node modules
+node_modules/
+
+# Wrangler local config
+.wrangler/
+
+# Environment variables (keep keys out of git)
+.env
+.env.local
+
+# Logs
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
