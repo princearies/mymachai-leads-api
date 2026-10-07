@@ -46,3 +46,21 @@ An ultra-fast, production-ready REST API powered by Cloudflare Workers and SerpA
   ]
 }
 ```
+
+---
+
+## 📊 How to Import API Leads Directly into Microsoft Excel (Without Coding)
+
+1. Copy your API Endpoint URL from RapidAPI (including your RapidAPI key headers) or your direct worker endpoint:
+   `https://mymachai-leads-api.p.rapidapi.com/leads?keyword=dental&location=Kuala+Lumpur`
+2. Open Microsoft Excel (Excel 2016 or newer / Office 365).
+3. Go to the top menu tab **Data** ➔ Click **Get Data** ➔ **From Other Sources** ➔ Select **From Web**.
+4. In the pop-up box:
+   - Select **Advanced**.
+   - Paste your API Request URL into the URL parts field.
+   - Under HTTP request header parameters, add your RapidAPI Headers:
+     - `X-RapidAPI-Key`: `YOUR_RAPIDAPI_KEY`
+     - `X-RapidAPI-Host`: `mymachai-leads-api.p.rapidapi.com`
+5. Click **OK**. Power Query Editor will open.
+6. Click on leads list ➔ Click **To Table** at the top left ➔ Click the Expand Icon (double arrow) on the column header to select all fields (name, phone, location, rating, etc.).
+7. Click **Close & Load**. Your live business leads are now populated directly into an Excel spreadsheet!
