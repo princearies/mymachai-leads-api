@@ -6,6 +6,3 @@ compatibility_date = "2026-10-07"
 # SERPAPI_KEY akan otomatis dari secret store
 [vars]
 # RATE_LIMIT = "1 req / 5s per IP" — free tier safe
-
-# Optional: Bind env var untuk API key (Ganti dengan .env later)
-# GEMINI_API_KEY=***
