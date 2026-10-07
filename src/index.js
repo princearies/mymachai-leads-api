@@ -66,13 +66,12 @@ function extractWebsite(place) {
 }
 
 function inferCategory(place) {
-  const cats = [
-    place.get_results?.categories?.[0] ||
+  return place.type ||
+    (place.types && place.types[0]) ||
     place.get_results?.type ||
+    place.get_results?.categories?.[0] ||
     place.category ||
-    '',
-  ];
-  return cats[0] || 'Unknown';
+    "General Business";
 }
 
 function normalizeLead(place, idx, keyword, location) {
