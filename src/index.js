@@ -17,6 +17,10 @@ const CORS_HEADERS = {
 async function fetchSerpAPI(env, keyword, location) {
   const apiKey = env.SERPAPI_KEY;
   if (!apiKey) {
+    console.error('[fetchSerpAPI] SERPAPI_KEY is missing from env:', {
+      envKeys: Object.keys(env || {}),
+      hasSERPAPI_KEY: !!env?.SERPAPI_KEY,
+    });
     throw new Error('SERPAPI_KEY is not configured in environment variables.');
   }
 
