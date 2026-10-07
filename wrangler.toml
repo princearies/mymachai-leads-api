@@ -5,7 +5,6 @@ compatibility_date = "2026-10-07"
 # Bind environment variables (including secrets)
 # SERPAPI_KEY akan otomatis dari secret store
 [vars]
-SERPAPI_KEY = ""
 # RATE_LIMIT = "1 req / 5s per IP" — free tier safe
 
 # Optional: Bind env var untuk API key (Ganti dengan .env later)
