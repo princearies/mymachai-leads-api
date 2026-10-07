@@ -1,154 +1,48 @@
-# Lead Scraper REST API — Cloudflare Worker
+# 🌍 Global Google Maps B2B Lead Scraper API
 
-B2B Lead Scraper REST API. Production-ready. Live data via SerpAPI (Google Maps).
+An ultra-fast, production-ready REST API powered by Cloudflare Workers and SerpAPI to scrape real-time B2B business leads from Google Maps worldwide.
 
-## Fitur
+## ⚡ Key Features
+- **Global Coverage:** Fetch live business data for any city or country (e.g., London, New York, Tokyo, Kuala Lumpur).
+- **Real-Time Live Data:** Powered by live Google Maps records.
+- **Developer & No-Code Friendly:** Export data to JSON, Python, JavaScript, or direct into Microsoft Excel / Google Sheets.
+- **High Availability:** Hosted on Cloudflare Edge Network with global low-latency response times.
 
-- ✅ Live search via SerpAPI (Google Maps engine)
-- ✅ JSON only, tidak ada UI
-- ✅ CORS ready (`Access-Control-Allow-Origin: *`)
-- ✅ Rate limiting (1 req / 5s per IP, free-tier friendly)
-- ✅ Graceful error handling (missing key, quota, invalid request)
-- ✅ Structured response format (industry standard)
-- ✅ ES Module (`export default { async fetch(request, env) }`)
+---
 
-## Env Variables
+## 🚀 API Endpoint & Query Parameters
 
-| Variable | Required | Description |
-|----------|----------|-------------|
-| `SERPAPI_KEY` | ✅ | SerpAPI API key (Google Maps engine) |
+### `GET /leads`
 
-Set via:
-```bash
-wrangler secret put SERPAPI_KEY
-```
+| Parameter  | Type   | Required | Description | Example |
+| :---       | :---   | :---     | :---        | :---    |
+| `keyword`  | String | **Yes**  | Business niche / keyword | `coffee shop`, `dentist`, `hardware store` |
+| `location` | String | No       | Target city or region | `Kuala Lumpur`, `London`, `New York` |
 
-## Endpoints
+---
 
-### `GET /api`
-
-Query parameters:
-
-| Parameter | Required | Description |
-|-----------|----------|-------------|
-| `keyword` | ✅ | Kata kunci carian (cth: `restaurant`, `technology`, `logistics`) |
-| `location` | ❌ | Daerah/city (cth: `Kuala Lumpur`, `Penang`, `Johor Bahru`) |
-
-Examples:
-```bash
-# Find restaurants in Kuala Lumpur
-curl "https://api.yourdomain.com/api?keyword=restaurant&location=Kuala+Lumpur"
-
-# Find technology companies in Malaysia
-curl "https://api.yourdomain.com/api?keyword=technology&location=Malaysia"
-```
-
-### Success Response
+## 📄 Response Payload Example (JSON)
 
 ```json
 {
   "success": true,
-  "keyword": "restaurant",
-  "location": "Kuala Lumpur",
-  "count": 12,
+  "keyword": "coffee shop",
+  "location": "London",
+  "count": 20,
   "source": "live_google_maps",
-  "timestamp": "2026-10-07T18:30:00.000Z",
+  "timestamp": "2026-10-07T10:55:01.376Z",
   "leads": [
     {
-      "id": "ChIJfZ9...",
-      "name": "Gouthaman Restaurant",
-      "category": "Food & Beverage",
-      "location": "123 Jalan Petaling, 50450 Kuala Lumpur, Malaysia",
-      "phone": "+60 3-1234 5678",
-      "email": "N/A",
-      "website": "https://gouthaman.com",
-      "rating": 4.5,
-      "reviews": 120,
-      "status": "active",
-      "timestamp": "2026-10-07T18:30:00.000Z"
+      "id": "ChIJ31RUqd1KzDER...",
+      "name": "London Artisan Coffee",
+      "category": "Coffee Shop",
+      "location": "123 Oxford Street, London, UK",
+      "phone": "+44 20 7946 0912",
+      "website": "https://example.com",
+      "rating": 4.7,
+      "reviews": 185,
+      "status": "active"
     }
   ]
 }
 ```
-
-### Error Responses
-
-**400 — Keyword missing:**
-```json
-{"success": false, "error": "Query parameter 'keyword' is required"}
-```
-
-**401 — SerpAPI key missing/invalid:**
-```json
-{"success": false, "error": "SerpAPI key is missing or invalid. Set SERPAPI_KEY environment variable."}
-```
-
-**429 — Rate limit exceeded:**
-```json
-{"success": false, "error": "SerpAPI rate limit or quota exceeded."}
-```
-
-## Deployment
-
-### 1. Install Wrangler CLI
-
-```bash
-npm install -g wrangler
-```
-
-### 2. Login
-
-```bash
-wrangler login
-```
-
-### 3. Set Secret
-
-```bash
-wrangler secret put SERPAPI_KEY
-```
-
-### 4. Deploy
-
-```bash
-wrangler publish
-```
-
-### 5. Custom Domain (optional)
-
-- Cloudflare Dashboard → Workers & Pages → `mymachai-leads-api` → Settings → Triggers → Add custom domain
-
-### 📈 How to Import Leads Directly into Google Sheets (No-Code Tutorial)
-
-You can easily pull live B2B leads into Google Sheets using the free "API Connector" extension or Google Apps Script:
-
-#### Method: Using API Connector Extension (Recommended)
-1. Open a new **Google Sheet**.
-2. Go to top menu: **Extensions** ➔ **Add-ons** ➔ **Get add-ons**.
-3. Search for **API Connector** (by InstallSimple) and click **Install**.
-4. Open the extension (**Extensions** ➔ **API Connector** ➔ **Open**).
-5. Configure your API Request:
-   - **Request URL:** `https://mymachai-leads-api.p.rapidapi.com/leads?keyword=restaurant&location=Singapore`
-   - **Headers:** Add your RapidAPI key:
-     - Key: `X-RapidAPI-Key` | Value: `YOUR_RAPIDAPI_KEY`
-     - Key: `X-RapidAPI-Host` | Value: `mymachai-leads-api.p.rapidapi.com`
-6. Set Output Destination to current sheet cell (`Sheet1!A1`).
-7. Click **Run**. All live business leads, phone numbers, and addresses will automatically populate into your Google Sheet!
-
----
-
-## Project Structure
-
-```
-.
-├── src/
-│   └── index.js      # Main worker entry (ES Module)
-├── wrangler.toml     # Worker config (main src/index.js)
-├── README.md
-└── .gitignore
-```
-
-## License
-
-MIT — Guna secara bebas untuk projek komersial.
-
