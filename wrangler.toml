@@ -1,5 +1,5 @@
 name = "mymachai-leads-api"
-main = "index.js"
+main = "src/index.js"
 compatibility_date = "2026-10-07"
 
 # Balance: fungsi tetap berbeza, RAM rendah, berjalan dalam 100ms
